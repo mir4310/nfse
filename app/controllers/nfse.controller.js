@@ -13,16 +13,20 @@ router.all('/', function (req, res) {
   res.send('Módulo NFSe!');
 });
 
+// Define a rota readTXT
 router.get('/readTXT/:cArquivo', async function (req, res){
   console.log('NFSe em processamento: ' + req.params.cArquivo)
   req.params.cArquivo = process.env.REMESSA + req.params.cArquivo
-  var objTXT = require('./nfse.txt')
-  const aNotas = await objTXT.leArquivoTXT(req.params.cArquivo)
-  
-  const jsonNotas = objTXT.parseTXT(req, aNotas)
-  
-  console.log(jsonNotas)
 
+  //Carrega modulo com funções de processamento
+  var objTXT = require('./nfse.txt') 
+
+  //Le arquivo TXT em um array
+  const aNotas = await objTXT.leArquivoTXT(req.params.cArquivo) 
+
+  //Parse no arquivo TXT criando um json já com os campos separados
+  const jsonNotas = objTXT.parseTXT(aNotas) 
+  const xmlNotas = objTXT.createXML(req, jsonNotas)
   
   
   res.send('NFSe em processamento: ' + req.params.cArquivo)

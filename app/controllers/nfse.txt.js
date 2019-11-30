@@ -20,9 +20,7 @@ module.exports = {
         }
     },
 
-    parseTXT: function(req, aNotas){
-        cPath = process.env.REMESSA;
-        nomeArq = process.env.GERADAS + req.params.cArquivo.replace('.txt', '');
+    parseTXT: function(aNotas){
         var aXML = []
         for (i=0; i<aNotas.length; i++){
             nTipoReg = aNotas[i].substring(0, 1);
@@ -62,5 +60,22 @@ module.exports = {
         }
 
         return aXML
+    },
+
+
+
+    createXML: function(req, aNotas){
+        cPath = process.env.REMESSA;
+        nomeArq = process.env.GERADAS + req.params.cArquivo.replace('.txt', '');
+
+        var jsonxml = require('jsontoxml');
+        var xmlNotas = jsonxml(aNotas)
+
+        return xmlNotas
+
+        for (i=0; i<aNotas.length; i++){
+            
+        }
+        return xmlPath
     }
 };
