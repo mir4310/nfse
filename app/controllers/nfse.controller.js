@@ -15,12 +15,13 @@ router.all('/', function (req, res) {
 
 router.get('/readTXT/:cArquivo', async function (req, res){
   console.log('NFSe em processamento: ' + req.params.cArquivo)
-  req.params.cArquivo = process.env.REMESSA + req.params.cArquivo;
-  var objTXT = require('./nfse.txt');
+  req.params.cArquivo = process.env.REMESSA + req.params.cArquivo
+  var objTXT = require('./nfse.txt')
   const aNotas = await objTXT.leArquivoTXT(req.params.cArquivo)
   
-  const xmlNotas = objTXT.converteTXT(req, aNotas)
+  const jsonNotas = objTXT.parseTXT(req, aNotas)
   
+  console.log(jsonNotas)
 
   
   
