@@ -25,7 +25,7 @@ app.use('/nfse', require('./app/controllers/nfse.controller'));
  * Inicia serviço
  **************************************/
 app.listen(process.env.PORTA, function () {
-    console.log("=========================================================");
+    console.log("=================================================================");
     console.log("Visual Info - Nota Fiscal de Serviço Eletrônica")
     console.log("API de integração - SIGEP\n");
     console.log('Porta de comunicação  : ' + process.env.PORTA);
@@ -34,5 +34,5 @@ app.listen(process.env.PORTA, function () {
     console.log('Pasta de Geradas      : ' + process.env.GERADAS);
     console.log('Pasta de Assinadas    : ' + process.env.ASSINADAS);
     console.log('Pasta de Transmitidas : ' + process.env.TRANSMITIDAS);
-    console.log("=========================================================");
+    console.log("=================================================================");
 });

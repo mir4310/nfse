@@ -27,6 +27,8 @@ router.get('/readTXT/:cArquivo', async function (req, res){
   //Parse no arquivo TXT criando um json já com os campos separados
   const jsonNotas = objTXT.parseTXT(aNotas) 
   const xmlNotas = objTXT.createXML(req, jsonNotas)
+
+  console.log(xmlNotas)
   
   
   res.send('NFSe em processamento: ' + req.params.cArquivo)
