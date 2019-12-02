@@ -65,6 +65,14 @@ module.exports = {
 
 
     createXML: function (req, aNotas) {
+        var moment = require('moment-timezone');
+
+        console.log(aNotas)
+        const { cpf } = require('cpf-cnpj-validator');
+        const { cnpj } = require('cpf-cnpj-validator');
+
+
+
         cPath = process.env.REMESSA;
         nomeArq = req.params.cArquivo.replace('.txt', '').trim();
         numLote = nomeArq.substring(nomeArq.length - 6);
@@ -75,16 +83,108 @@ module.exports = {
          ************************************************/
         xmlRps = []
         for (i = 0; i < aNotas.length; i++) {
+            var docTomador = parseInt(aNotas[i].tomadorCpfCnpj)
+            xmlDocumentoTomador = ""
+
+            if (cpf.isValid(aNotas[i].tomadorCpfCnpj)) {
+                xml = { name: 'Cpf', text: aNotas[i].tomadorCpfCnpj }
+            } else if (cnpj.isValid(aNotas[0].tomadorCpfCnpj)) {
+                xmlDocumentoTomador = { name: 'Cnpj', text: aNotas[i].tomadorCpfCnpj }
+            } else {
+                xmlDocumentoTomador = ""
+            }
             xmlRps.push({
                 name: 'Rps',
                 children: [
                     {
                         name: 'InfDeclaracaoPrestacaoServico',
-                        children:[
-                            { name: 'Rps'},
-                            { name: 'Servico'},
-                            { name: 'Prestador'},
-                            { name: 'Tomador'},
+                        children: [
+                            {
+                                name: 'Rps',
+                                children: [
+                                    {
+                                        name: 'IdentificacaoRps', children: [
+                                            { name: 'Numero', text: '' },
+                                            { name: 'Tipo', text: '' },
+                                        ]
+                                    },
+                                    { name: 'DataEmissao', text: moment().tz('America/Sao_Paulo').format('YYYY-MM-DDThh:mm:ss') },
+                                    { name: 'Status', text: 'CO' },
+                                ]
+                            },
+                            {
+                                name: 'Servico',
+                                children: [
+                                    {
+                                        name: 'ItemListaServico', text: '',
+                                        children: [
+                                            { name: 'ValorServicos', text: FormataValorTXT(aNotas[i].valorServicos) },
+                                            { name: 'ValorIssRetido', text: FormataValorTXT(aNotas[i].valorRetISS) },
+                                            { name: 'ValorDeducoes', text: FormataValorTXT(0) },
+                                            { name: 'ValorPis', text: FormataValorTXT(aNotas[i].valorRetPIS) },
+                                            { name: 'ValorCofins', text: FormataValorTXT(aNotas[i].valorCOFINS) },
+                                            { name: 'ValorInss', text: FormataValorTXT(aNotas[i].valorRetINSS) },
+                                            { name: 'ValorIr', text: FormataValorTXT(aNotas[i].valorRetIR) },
+                                            { name: 'ValorCsll', text: FormataValorTXT(aNotas[i].valorRetCSLL) },
+                                            { name: 'OutrasRetencoes', text: FormataValorTXT(0) },
+                                            { name: 'Aliquota', text: FormataValorTXT(aNotas[i].aliqSimples) },
+                                            { name: 'DescontoIncondicionado', text: FormataValorTXT(0) },
+                                            { name: 'DescontoCondicionado', text: FormataValorTXT(0) },
+                                        ]
+                                    },
+                                    { name: 'CodigoCnae', text: '' },
+                                    { name: 'CodigoTributacaoMunicipio', text: aNotas[i].codServico },
+                                    { name: 'Discriminacao', text: aNotas[i].descricaoServico },
+                                    { name: 'CodigoMunicipio', text: aNotas[i].codCidadePrestacaoServico },
+                                    { name: 'ExigibilidadeISS', text: '01' },
+                                ]
+                            },
+                            {
+                                name: 'Prestador',
+                                children: [
+                                    { name: 'CpfCnpj', text: process.env.CNPJ },
+                                    { name: 'InscricaoMunicipal', text: process.env.IM }
+                                ]
+                            },
+                            {
+                                name: 'Tomador',
+                                children: [
+                                    {
+                                        name: 'IdentificacaoTomador',
+                                        children: [
+                                            {
+                                                name: 'CpfCnpj',
+                                                children: [
+                                                    xmlDocumentoTomador
+                                                ]
+                                            },
+                                        ]
+                                    },
+                                    { name: 'RazaoSocial', text: aNotas[i].nomeRazao },
+                                    {
+                                        name: 'Endereco',
+                                        children: [
+                                            { name: 'TipoLogradouro', text: '' },
+                                            { name: 'Logradouro', text: aNotas[i].endTomador },
+                                            { name: 'Numero', text: aNotas[i].numEndTomador },
+                                            { name: 'Complemento', text: aNotas[i].complEndTomador },
+                                            { name: 'Bairro', text: aNotas[i].bairroTomador },
+                                            { name: 'CodigoMunicipio', text: aNotas[i].codCidadeTomador },
+                                            { name: 'Uf', text: aNotas[i].ufTomador },
+                                            { name: 'Cep', text: aNotas[i].cepTomador }
+                                        ]
+                                    },
+                                    {
+                                        name: 'Contato',
+                                        children: [
+                                            { name: 'Telefone', text: '' },
+                                            { name: 'Ddd', text: '' },
+                                            { name: 'TipoTelefone', text: '' },
+                                            { name: 'Email', text: aNotas[i].emailTomador },
+                                        ]
+                                    },
+                                ]
+                            },
                         ]
                     }
                 ]
@@ -133,3 +233,9 @@ module.exports = {
         return xmlNotas
     }
 };
+
+
+function FormataValorTXT(valor) {
+    auxValor = valor / 100
+    return auxValor.toFixed(2)
+}
