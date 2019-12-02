@@ -66,23 +66,22 @@ module.exports = {
 
     createXML: function (req, aNotas) {
         var moment = require('moment-timezone');
+        var jsonxml = require('jsontoxml');
+
 
         console.log(aNotas)
         const { cpf } = require('cpf-cnpj-validator');
         const { cnpj } = require('cpf-cnpj-validator');
 
-
-
         cPath = process.env.REMESSA;
         nomeArq = req.params.cArquivo.replace('.txt', '').trim();
         numLote = nomeArq.substring(nomeArq.length - 6);
 
-
         /************************************************
          * Loop criando NFSe
          ************************************************/
-        xmlRps = []
         for (i = 0; i < aNotas.length; i++) {
+            numNFSe = i + 1000001
             var docTomador = parseInt(aNotas[i].tomadorCpfCnpj)
             xmlDocumentoTomador = ""
 
@@ -93,9 +92,9 @@ module.exports = {
             } else {
                 xmlDocumentoTomador = ""
             }
-            xmlRps.push({
-                name: 'Rps',
-                children: [
+
+            auxRPS = {
+                'Rps': [
                     {
                         name: 'InfDeclaracaoPrestacaoServico',
                         children: [
@@ -104,8 +103,8 @@ module.exports = {
                                 children: [
                                     {
                                         name: 'IdentificacaoRps', children: [
-                                            { name: 'Numero', text: '' },
-                                            { name: 'Tipo', text: '' },
+                                            { name: 'Numero', text: numNFSe},
+                                            { name: 'Tipo', text: 'R1' },
                                         ]
                                     },
                                     { name: 'DataEmissao', text: moment().tz('America/Sao_Paulo').format('YYYY-MM-DDThh:mm:ss') },
@@ -188,10 +187,49 @@ module.exports = {
                         ]
                     }
                 ]
-            })
-        }
+            } // Fim do auxRPS
 
+            /*****************************************************
+             * Converte XML da NFSe
+             *****************************************************/
+            var xmlNotas = jsonxml(auxRPS, { prettyPrint: true })
 
+            /*******************************************************
+             * Assina e salva XML assinado
+             *******************************************************/
+            var SignedXml = require('xml-crypto').SignedXml
+            var fs = require('fs')
+            var sig = new SignedXml()
+            sig.addReference("//*[local-name(.)='Rps']")
+            sig.signingKey = fs.readFileSync(process.env.CERTIFICADO)
+            sig.computeSignature(xmlNotas)
+
+            console.log(sig.getSignedXml())
+            pathSignXML = process.env.ASSINADAS + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD') + '\\'
+
+            if (!fs.existsSync(process.env.ASSINADAS + moment().format('YYYY') + '\\')){
+                fs.mkdirSync(process.env.ASSINADAS + moment().format('YYYY') + '\\');
+            }
+
+            if (!fs.existsSync(process.env.ASSINADAS + moment().format('YYYY') + '\\' + moment().format('MM'))){
+                fs.mkdirSync(process.env.ASSINADAS + moment().format('YYYY') + '\\' + moment().format('MM'))
+            }
+
+            if (!fs.existsSync(process.env.ASSINADAS + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD'))){
+                fs.mkdirSync(process.env.ASSINADAS + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD'));
+            }
+
+            fs.writeFileSync(pathSignXML + numNFSe + '.xml', sig.getSignedXml())
+
+            
+        }//Fim  do loop das NFSe
+
+        const x509 = require('x509');
+        var issuer = x509.getIssuer(process.env.CERTIFICADO);
+
+        console.log(issuer);
+
+        return true
         /**********************************************
          * Cria Lote com as NFSe gerada acima
          **********************************************/
@@ -227,7 +265,7 @@ module.exports = {
         ]
         console.log(xmlLote)
 
-        var jsonxml = require('jsontoxml');
+        
         var xmlNotas = jsonxml(xmlLote, { prettyPrint: true })
 
         return xmlNotas
@@ -239,3 +277,19 @@ function FormataValorTXT(valor) {
     auxValor = valor / 100
     return auxValor.toFixed(2)
 }
+
+
+/**/
+/*
+function MyKeyInfo() {
+    this.getKeyInfo = function(key, prefix) {
+      prefix = prefix || ''
+      prefix = prefix ? prefix + ':' : prefix
+      return "<" + prefix + "X509Data></" + prefix + "X509Data>"
+    }
+    this.getKey = function(keyInfo) {
+      //you can use the keyInfo parameter to extract the key in any way you want      
+      return fs.readFileSync("key.pem")
+    }
+  }
+  */
