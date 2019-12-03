@@ -204,11 +204,9 @@ module.exports = {
             //sig.signatureAlgorithm = "http://mySignatureAlgorithm"
             sig.keyInfoProvider = new MyKeyInfo()
             //sig.canonicalizationAlgorithm = "http://MyCanonicalization"
-            //sig.addReference("//*[local-name(.)='Rps']")
+            sig.addReference("//*[local-name(.)='Rps']")
             sig.signingKey = fs.readFileSync(process.env.CERTIFICADO)
             sig.computeSignature(xmlNotas)
-
-            console.log(sig.getSignedXml())
             pathSignXML = process.env.ASSINADAS + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD') + '\\'
 
             if (!fs.existsSync(process.env.ASSINADAS + moment().format('YYYY') + '\\')) {
@@ -226,7 +224,6 @@ module.exports = {
             fs.writeFileSync(pathSignXML + numNFSe + '.xml', sig.getSignedXml())
 
         }//Fim  do loop das NFSe
-
 
         return true
         /**********************************************
@@ -280,12 +277,22 @@ function FormataValorTXT(valor) {
 
 function MyKeyInfo() {
     this.getKeyInfo = function (key, prefix) {
+
+        var fs = require("fs")
+        pem = fs.readFileSync(process.env.CERTIFICADO).toString()
+
+        nPosIni = pem.indexOf('-----BEGIN CERTIFICATE-----')
+        nPosFim = pem.indexOf('-----END CERTIFICATE-----')
+
+        x509Data = pem.substr(nPosIni + 27, nPosFim - nPosIni - 27).trim().replace(/(\r\n|\n|\r)/gm, "");
+
+        //console.log(x509Data)
         prefix = prefix || ''
         prefix = prefix ? prefix + ':' : prefix
-        return "<" + prefix + "X509Data><X509Certificate>aaa</X509Certificate></" + prefix + "X509Data>"
+        return "<" + prefix + "X509Data><X509Certificate>" + x509Data + "</X509Certificate></" + prefix + "X509Data>"
     }
     this.getKey = function (keyInfo) {
         //you can use the keyInfo parameter to extract the key in any way you want      
-        return fs.readFileSync("key.pem")
+        return fs.readFileSync(process.env.CERTIFICADO)
     }
 }
