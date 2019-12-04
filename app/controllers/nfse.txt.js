@@ -69,7 +69,7 @@ module.exports = {
         var jsonxml = require('jsontoxml');
 
 
-        console.log(aNotas)
+        //console.log(aNotas)
         const { cpf } = require('cpf-cnpj-validator');
         const { cnpj } = require('cpf-cnpj-validator');
 
@@ -131,8 +131,8 @@ module.exports = {
                                             { name: 'DescontoCondicionado', text: FormataValorTXT(0) },
                                         ]
                                     },
-                                    { name: 'CodigoCnae', text: '' },
-                                    { name: 'CodigoTributacaoMunicipio', text: aNotas[i].codServico },
+                                    //{ name: 'CodigoCnae', text: '6209100' },
+                                    { name: 'CodigoTributacaoMunicipio', text: FormataValorTXT(aNotas[i].codServico) },
                                     { name: 'Discriminacao', text: aNotas[i].descricaoServico },
                                     { name: 'CodigoMunicipio', text: aNotas[i].codCidadePrestacaoServico },
                                     { name: 'ExigibilidadeISS', text: '01' },
@@ -163,7 +163,7 @@ module.exports = {
                                     {
                                         name: 'Endereco',
                                         children: [
-                                            { name: 'TipoLogradouro', text: '' },
+                                            { name: 'TipoLogradouro', text: 'RUA' },
                                             { name: 'Logradouro', text: aNotas[i].endTomador },
                                             { name: 'Numero', text: aNotas[i].numEndTomador },
                                             { name: 'Complemento', text: aNotas[i].complEndTomador },
@@ -176,9 +176,9 @@ module.exports = {
                                     {
                                         name: 'Contato',
                                         children: [
-                                            { name: 'Telefone', text: '' },
-                                            { name: 'Ddd', text: '' },
-                                            { name: 'TipoTelefone', text: '' },
+                                            { name: 'Telefone', text: '96581771' },
+                                            { name: 'Ddd', text: '014' },
+                                            { name: 'TipoTelefone', text: 'CO' },
                                             { name: 'Email', text: aNotas[i].emailTomador },
                                         ]
                                     },
@@ -200,13 +200,30 @@ module.exports = {
             var SignedXml = require('xml-crypto').SignedXml
             var fs = require('fs')
             var sig = new SignedXml()
-            /*configure the signature object to use the custom algorithms*/
-            //sig.signatureAlgorithm = "http://mySignatureAlgorithm"
+
+            sig.canonicalizationAlgorithm = "http://www.w3.org/TR/2001/REC-xml-c14n-20010315"
+
             sig.keyInfoProvider = new MyKeyInfo()
-            //sig.canonicalizationAlgorithm = "http://MyCanonicalization"
-            sig.addReference("//*[local-name(.)='Rps']")
+
+
+            //var signature = select(xmlNotas, "/*/*[local-name(.)='Signature' and namespace-uri(.)='http://www.w3.org/2000/09/xmldsig#']")[0]
+
+            sig.addReference("/*",
+                ["http://www.w3.org/2000/09/xmldsig#enveloped-signature", "http://www.w3.org/TR/2001/REC-xml-c14n-20010315"],
+                'http://www.w3.org/2000/09/xmldsig#sha1',
+                '',
+                '',
+                '',
+                // let the URI attribute with an empty value,
+                // this is the signal that the signature is affecting the whole xml document
+                true
+            )
             sig.signingKey = fs.readFileSync(process.env.CERTIFICADO)
             sig.computeSignature(xmlNotas)
+
+            /*****************************************************
+             * Cria o path ano/mes/dia para guardar as NFSe
+             *****************************************************/
             pathSignXML = process.env.ASSINADAS + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD') + '\\'
 
             if (!fs.existsSync(process.env.ASSINADAS + moment().format('YYYY') + '\\')) {
@@ -221,11 +238,14 @@ module.exports = {
                 fs.mkdirSync(process.env.ASSINADAS + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD'));
             }
 
-            fs.writeFileSync(pathSignXML + numNFSe + '.xml', sig.getSignedXml())
+            // Salva o arquivo
+            fs.writeFileSync(pathSignXML + 'rps_' + numNFSe + '.xml', sig.getSignedXml())
 
         }//Fim  do loop das NFSe
 
+        ///NFSe assinadas e salvas na pasta
         return true
+
         /**********************************************
          * Cria Lote com as NFSe gerada acima
          **********************************************/
