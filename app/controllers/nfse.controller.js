@@ -15,22 +15,47 @@ router.all('/', function (req, res) {
 
 // Define a rota readTXT
 router.get('/readTXT/:cArquivo', async function (req, res){
+  console.log("\n\n======= Iniciando processamento de NFSe =======")
   console.log('NFSe em processamento: ' + req.params.cArquivo)
   req.params.cArquivo = process.env.REMESSA + req.params.cArquivo
+
 
   //Carrega modulo com funções de processamento
   var objTXT = require('./nfse.txt') 
 
+
   //Le arquivo TXT em um array
+  console.log("Lendo arquivo txt...")
   const aNotas = await objTXT.leArquivoTXT(req.params.cArquivo) 
 
   //Parse no arquivo TXT criando um json já com os campos separados
-  const jsonNotas = objTXT.parseTXT(aNotas) 
-  const xmlNotas = objTXT.createXML(req, jsonNotas)
+  console.log("Decodificando arquivo txt...")
+  const jsonNotas = await objTXT.parseTXT(aNotas) 
 
-  console.log(xmlNotas)
+
+  //Cria arquivos RPS e assina
+  console.log("Gerando RPS...")
+  const pathRPSLote = await objTXT.createXML(req, jsonNotas)
+
+  if (!pathRPSLote){
+    console.log("Erro gerando RPS...")
+    return false
+  }
+
+  //Gera lote de RPS e assina
+  console.log("Gerando lote...")
+  txtLote = await objTXT.createLote(req, pathRPSLote)
+
+
+  console.log("Gerando Envelope...")
+
+
+
+  console.log("Transmitindo Envelope...")
+
+
   
-  
+  console.log("===== Processamento concluido com sucesso =====")
   res.send('NFSe em processamento: ' + req.params.cArquivo)
 });
 

@@ -31,7 +31,7 @@ app.listen(process.env.PORTA, function () {
     console.log('Porta de comunicação  : ' + process.env.PORTA);
     console.log('Pasta de Remessa      : ' + process.env.REMESSA);
     console.log('Pasta de Retorno      : ' + process.env.RETORNO);
-    console.log('Pasta de Geradas      : ' + process.env.GERADAS);
+    console.log('Pasta de Lotes        : ' + process.env.LOTES);
     console.log('Pasta de Assinadas    : ' + process.env.ASSINADAS);
     console.log('Pasta de Transmitidas : ' + process.env.TRANSMITIDAS);
     console.log("=================================================================");

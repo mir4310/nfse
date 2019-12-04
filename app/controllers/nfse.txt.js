@@ -63,7 +63,9 @@ module.exports = {
     },
 
 
-
+    /**********************************************************
+     * Função para criação do XML RPS
+     **********************************************************/
     createXML: function (req, aNotas) {
         var moment = require('moment-timezone');
         var jsonxml = require('jsontoxml');
@@ -77,11 +79,13 @@ module.exports = {
         nomeArq = req.params.cArquivo.replace('.txt', '').trim();
         numLote = nomeArq.substring(nomeArq.length - 6);
 
+        pathRPS = []
+
         /************************************************
          * Loop criando NFSe
          ************************************************/
         for (i = 0; i < aNotas.length; i++) {
-            numNFSe = i + 1000001
+            numNFSe = i + 1
             var docTomador = parseInt(aNotas[i].tomadorCpfCnpj)
             xmlDocumentoTomador = ""
 
@@ -115,24 +119,15 @@ module.exports = {
                                 name: 'Servico',
                                 children: [
                                     {
-                                        name: 'ItemListaServico', text: '',
+                                        name: 'Valores', text: '',
                                         children: [
                                             { name: 'ValorServicos', text: FormataValorTXT(aNotas[i].valorServicos) },
-                                            { name: 'ValorIssRetido', text: FormataValorTXT(aNotas[i].valorRetISS) },
-                                            { name: 'ValorDeducoes', text: FormataValorTXT(0) },
-                                            { name: 'ValorPis', text: FormataValorTXT(aNotas[i].valorRetPIS) },
-                                            { name: 'ValorCofins', text: FormataValorTXT(aNotas[i].valorCOFINS) },
-                                            { name: 'ValorInss', text: FormataValorTXT(aNotas[i].valorRetINSS) },
-                                            { name: 'ValorIr', text: FormataValorTXT(aNotas[i].valorRetIR) },
-                                            { name: 'ValorCsll', text: FormataValorTXT(aNotas[i].valorRetCSLL) },
-                                            { name: 'OutrasRetencoes', text: FormataValorTXT(0) },
-                                            { name: 'Aliquota', text: FormataValorTXT(aNotas[i].aliqSimples) },
-                                            { name: 'DescontoIncondicionado', text: FormataValorTXT(0) },
-                                            { name: 'DescontoCondicionado', text: FormataValorTXT(0) },
+                                            { name: 'Aliquota', text: FormataValorTXT(aNotas[i].aliqSimples) }
                                         ]
                                     },
-                                    //{ name: 'CodigoCnae', text: '6209100' },
-                                    { name: 'CodigoTributacaoMunicipio', text: FormataValorTXT(aNotas[i].codServico) },
+                                    { name: 'CodigoCnae', text: '6201501' },
+                                    { name: 'ItemListaServico', text: FormataValorTXT(aNotas[i].codServico) },
+                                    { name: 'CodigoTributacaoMunicipio', text: '1' },
                                     { name: 'Discriminacao', text: aNotas[i].descricaoServico },
                                     { name: 'CodigoMunicipio', text: aNotas[i].codCidadePrestacaoServico },
                                     { name: 'ExigibilidadeISS', text: '01' },
@@ -141,7 +136,15 @@ module.exports = {
                             {
                                 name: 'Prestador',
                                 children: [
-                                    { name: 'CpfCnpj', text: process.env.CNPJ },
+                                    {
+                                        name: 'CpfCnpj',
+                                        children: [
+                                            {
+                                                name: 'Cnpj',
+                                                text: process.env.CNPJ
+                                            },
+                                        ]
+                                    },
                                     { name: 'InscricaoMunicipal', text: process.env.IM }
                                 ]
                             },
@@ -163,7 +166,6 @@ module.exports = {
                                     {
                                         name: 'Endereco',
                                         children: [
-                                            { name: 'TipoLogradouro', text: 'RUA' },
                                             { name: 'Logradouro', text: aNotas[i].endTomador },
                                             { name: 'Numero', text: aNotas[i].numEndTomador },
                                             { name: 'Complemento', text: aNotas[i].complEndTomador },
@@ -176,9 +178,9 @@ module.exports = {
                                     {
                                         name: 'Contato',
                                         children: [
-                                            { name: 'Telefone', text: '96581771' },
-                                            { name: 'Ddd', text: '014' },
-                                            { name: 'TipoTelefone', text: 'CO' },
+                                            //{ name: 'Telefone', text: '96581771' },
+                                            //{ name: 'Ddd', text: '014' },
+                                            //{ name: 'TipoTelefone', text: 'CO' },
                                             { name: 'Email', text: aNotas[i].emailTomador },
                                         ]
                                     },
@@ -240,16 +242,27 @@ module.exports = {
 
             // Salva o arquivo
             fs.writeFileSync(pathSignXML + 'rps_' + numNFSe + '.xml', sig.getSignedXml())
-
+            pathRPS.push(pathSignXML + 'rps_' + numNFSe + '.xml')
         }//Fim  do loop das NFSe
+        return pathRPS
+    },
 
-        ///NFSe assinadas e salvas na pasta
-        return true
 
-        /**********************************************
-         * Cria Lote com as NFSe gerada acima
-         **********************************************/
-        xmlLote = [
+    /**********************************************************
+     * Função para criação do XML de Lotes de RPS
+     **********************************************************/
+    createLote: function (req, pathRPSLote) {
+        var SignedXml = require('xml-crypto').SignedXml
+        var fs = require('fs')
+        var sig = new SignedXml()
+        var jsonxml = require('jsontoxml');
+        var moment = require('moment-timezone');
+
+        cPath = process.env.REMESSA;
+        nomeArq = req.params.cArquivo.replace('.txt', '').trim();
+        numLote = nomeArq.substring(nomeArq.length - 6);
+        numLote = 1;
+        auxLote = [
             {
                 name: 'EnviarLoteRpsSincronoEnvio', attrs: { xmlns: 'http://www.abrasf.org.br/nfse.xsd' },
                 children: [
@@ -262,29 +275,86 @@ module.exports = {
                         ]
                     },
                     {
-                        name: 'LoteRps', attrs: { versao: '1.01' },
+                        name: 'LoteRps', attrs: { versao: '2.00' },
                         children: [
                             { name: 'NumeroLote', text: numLote },
-                            { name: 'CpfCnpj', text: process.env.CNPJ },
+                            {
+                                name: 'CpfCnpj',
+                                children: [
+                                    {
+                                        name: 'Cnpj',
+                                        text: process.env.CNPJ
+                                    },
+                                ]
+                            },
                             { name: 'InscricaoMunicipal', text: process.env.IM },
-                            { name: 'QuantidadeRps', text: aNotas.length }
-                        ]
-                    },
-                    {
-                        name: 'ListaRps',
-                        children: [
-                            xmlRps
+                            { name: 'QuantidadeRps', text: pathRPSLote.length },
+                            { name: 'ListaRps', text: '[RPS]' }
                         ]
                     }
                 ]
             }
         ]
-        console.log(xmlLote)
+
+        var xmlLote = jsonxml(auxLote, { prettyPrint: true })
+
+        auxRPS = "";
+        for (i = 0; i < pathRPSLote.length; i++) {
+            auxRPS += fs.readFileSync(pathRPSLote[i])
+        }
+
+        xmlLote = xmlLote.replace("[RPS]", auxRPS)
 
 
-        var xmlNotas = jsonxml(xmlLote, { prettyPrint: true })
 
-        return xmlNotas
+
+        /*******************************************************
+        * Assina e salva XML assinado
+        *******************************************************/
+        var SignedXml = require('xml-crypto').SignedXml
+        var fs = require('fs')
+        var sig = new SignedXml()
+
+        sig.canonicalizationAlgorithm = "http://www.w3.org/TR/2001/REC-xml-c14n-20010315"
+
+        sig.keyInfoProvider = new MyKeyInfo()
+
+
+        //var signature = select(xmlNotas, "/*/*[local-name(.)='Signature' and namespace-uri(.)='http://www.w3.org/2000/09/xmldsig#']")[0]
+
+        sig.addReference("/*",
+            ["http://www.w3.org/2000/09/xmldsig#enveloped-signature", "http://www.w3.org/TR/2001/REC-xml-c14n-20010315"],
+            'http://www.w3.org/2000/09/xmldsig#sha1',
+            '',
+            '',
+            '',
+            // let the URI attribute with an empty value,
+            // this is the signal that the signature is affecting the whole xml document
+            true
+        )
+        sig.signingKey = fs.readFileSync(process.env.CERTIFICADO)
+        sig.computeSignature(xmlLote)
+
+        /*****************************************************
+         * Cria o path ano/mes/dia para guardar as NFSe
+         *****************************************************/
+        pathLotes = process.env.LOTES + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD') + '\\'
+
+        if (!fs.existsSync(process.env.LOTES + moment().format('YYYY') + '\\')) {
+            fs.mkdirSync(process.env.LOTES + moment().format('YYYY') + '\\');
+        }
+
+        if (!fs.existsSync(process.env.LOTES + moment().format('YYYY') + '\\' + moment().format('MM'))) {
+            fs.mkdirSync(process.env.LOTES + moment().format('YYYY') + '\\' + moment().format('MM'))
+        }
+
+        if (!fs.existsSync(process.env.LOTES + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD'))) {
+            fs.mkdirSync(process.env.LOTES + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD'));
+        }
+
+
+        fs.writeFileSync(pathLotes + 'loteRps_' + numLote + '.xml', sig.getSignedXml())
+        return pathLotes + 'loteRps_' + numLote + '.xml'
     }
 };
 
