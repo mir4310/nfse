@@ -21,7 +21,7 @@ router.get('/readTXT/:cArquivo', async function (req, res){
 
 
   //Carrega modulo com funções de processamento
-  var objTXT = require('./nfse.txt') 
+  var objTXT = require('./nfse.sigep') 
 
 
   //Le arquivo TXT em um array
@@ -44,14 +44,20 @@ router.get('/readTXT/:cArquivo', async function (req, res){
 
   //Gera lote de RPS e assina
   console.log("Gerando lote...")
-  txtLote = await objTXT.createLote(req, pathRPSLote)
+  const pathLote = await objTXT.createLote(req, pathRPSLote)
 
 
   console.log("Gerando Envelope...")
+  const pathEnvelope = await objTXT.createEnvelope(req, pathLote)
 
 
 
   console.log("Transmitindo Envelope...")
+  
+
+
+  console.log("Gerando Retorno...")
+
 
 
   

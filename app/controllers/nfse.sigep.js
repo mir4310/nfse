@@ -70,22 +70,26 @@ module.exports = {
         var moment = require('moment-timezone');
         var jsonxml = require('jsontoxml');
 
-
         //console.log(aNotas)
         const { cpf } = require('cpf-cnpj-validator');
         const { cnpj } = require('cpf-cnpj-validator');
 
         cPath = process.env.REMESSA;
         nomeArq = req.params.cArquivo.replace('.txt', '').trim();
-        numLote = nomeArq.substring(nomeArq.length - 6);
 
         pathRPS = []
 
+
+        var arqIni = require('./parseIni').leArqIni();
+        numNFSe = parseInt(arqIni.RPS.NUMERO);
         /************************************************
          * Loop criando NFSe
          ************************************************/
         for (i = 0; i < aNotas.length; i++) {
-            numNFSe = i + 1
+            numNFSe++;
+            arqIni.RPS.NUMERO = numNFSe;
+            require('./parseIni').writeIni(arqIni);
+
             var docTomador = parseInt(aNotas[i].tomadorCpfCnpj)
             xmlDocumentoTomador = ""
 
@@ -260,8 +264,13 @@ module.exports = {
 
         cPath = process.env.REMESSA;
         nomeArq = req.params.cArquivo.replace('.txt', '').trim();
-        numLote = nomeArq.substring(nomeArq.length - 6);
-        numLote = 1;
+
+        var arqIni = require('./parseIni').leArqIni();
+        numLote = parseInt(arqIni.RPS.LOTE) + 1;
+
+        arqIni.RPS.LOTE = numLote
+        require('./parseIni').writeIni(arqIni);
+
         auxLote = [
             {
                 name: 'EnviarLoteRpsSincronoEnvio', attrs: { xmlns: 'http://www.abrasf.org.br/nfse.xsd' },
@@ -353,8 +362,61 @@ module.exports = {
         }
 
 
-        fs.writeFileSync(pathLotes + 'loteRps_' + numLote + '.xml', sig.getSignedXml())
-        return pathLotes + 'loteRps_' + numLote + '.xml'
+        fs.writeFileSync(pathLotes + 'loteRps_' + ("000000" + numLote).slice(-6) + '.xml', sig.getSignedXml())
+        return pathLotes + 'loteRps_' + ("000000" + numLote).slice(-6) + '.xml'
+    },
+
+
+    /**********************************************************
+     * Função para criação do Envelope de Lote de RPS - SOAP
+     **********************************************************/
+    createEnvelope: function (req, pathLote) {
+        var jsonxml = require('jsontoxml');
+        var fs = require('fs')
+        xmlLote = fs.readFileSync(pathLote);
+        var moment = require('moment-timezone');
+
+        xmlEnvelope = `
+        <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ws="http://ws.integration.pm.bsit.com.br/">
+        <soapenv:Header/>
+        <soapenv:Body>
+           <ws:enviarLoteRpsSincrono>
+              <!--Optional:-->
+              <EnviarLoteRpsSincronoEnvio>
+                 <![CDATA[
+                     ` + xmlLote + `
+                 ]]>
+              </EnviarLoteRpsSincronoEnvio>
+           </ws:enviarLoteRpsSincrono>
+        </soapenv:Body>
+     </soapenv:Envelope>
+            `;
+
+
+
+
+        /*****************************************************
+        * Cria o path ano/mes/dia para guardar as NFSe
+        *****************************************************/
+        pathEnvelopes = process.env.ENVELOPES + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD') + '\\'
+
+        if (!fs.existsSync(process.env.ENVELOPES + moment().format('YYYY') + '\\')) {
+            fs.mkdirSync(process.env.ENVELOPES + moment().format('YYYY') + '\\');
+        }
+
+        if (!fs.existsSync(process.env.ENVELOPES + moment().format('YYYY') + '\\' + moment().format('MM'))) {
+            fs.mkdirSync(process.env.ENVELOPES + moment().format('YYYY') + '\\' + moment().format('MM'))
+        }
+
+        if (!fs.existsSync(process.env.ENVELOPES + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD'))) {
+            fs.mkdirSync(process.env.ENVELOPES + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD'));
+        }
+
+        var path = require("path");
+        fs.writeFileSync(pathEnvelopes + 'Envelope_' + path.basename(pathLote.toString()), xmlEnvelope)
+        return pathEnvelopes + 'Envelope_' + path.basename(pathLote)
+        
+
     }
 };
 
