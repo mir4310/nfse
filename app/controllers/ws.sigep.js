@@ -29,9 +29,9 @@ module.exports = {
                 try {
                     const { response } = await soapRequest({ url: url, headers: sampleHeaders, xml: xml, timeout: 5000 }); // Optional timeout parameter(milliseconds)
                     const { headers, body, statusCode } = response;
-                    console.log(headers);
-                    console.log(body);
-                    console.log(statusCode);
+                    //console.log(headers);
+                    //console.log(body);
+                    //console.log(statusCode);
 
                     const { DOMParser } = require('xmldom');
                     const xmlToJSON = require('xmlToJSON');
@@ -45,6 +45,7 @@ module.exports = {
                         statusWS = false
                     }
 
+                    console.log ('WebService online: ' + statusWS + '\n')
                     res.send({ status: statusWS, response: body });
 
                 } catch (err) {
