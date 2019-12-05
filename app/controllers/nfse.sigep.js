@@ -66,7 +66,7 @@ module.exports = {
     /**********************************************************
      * Função para criação do XML RPS
      **********************************************************/
-    createXML: function (req, aNotas) {
+    createXML: function (req, aNotas, cnpjEmissor) {
         var moment = require('moment-timezone');
         var jsonxml = require('jsontoxml');
 
@@ -74,20 +74,20 @@ module.exports = {
         const { cpf } = require('cpf-cnpj-validator');
         const { cnpj } = require('cpf-cnpj-validator');
 
-        cPath = process.env.REMESSA;
+        const arqIni = require('./parseIni').leArqIni();
+
+        cPath = arqIni[cnpjEmissor].REMESSA;
         nomeArq = req.params.cArquivo.replace('.txt', '').trim();
 
         pathRPS = []
 
-
-        var arqIni = require('./parseIni').leArqIni();
-        numNFSe = parseInt(arqIni.RPS.NUMERO);
+        numNFSe = parseInt(arqIni[cnpjEmissor].RPS_NUMERO);
         /************************************************
          * Loop criando NFSe
          ************************************************/
         for (i = 0; i < aNotas.length; i++) {
             numNFSe++;
-            arqIni.RPS.NUMERO = numNFSe;
+            arqIni[cnpjEmissor].RPS_NUMERO = numNFSe;
             require('./parseIni').writeIni(arqIni);
 
             var docTomador = parseInt(aNotas[i].tomadorCpfCnpj)
@@ -145,11 +145,11 @@ module.exports = {
                                         children: [
                                             {
                                                 name: 'Cnpj',
-                                                text: process.env.CNPJ
+                                                text: arqIni[cnpjEmissor].CNPJ
                                             },
                                         ]
                                     },
-                                    { name: 'InscricaoMunicipal', text: process.env.IM }
+                                    { name: 'InscricaoMunicipal', text: arqIni[cnpjEmissor].IM }
                                 ]
                             },
                             {
@@ -209,7 +209,7 @@ module.exports = {
 
             sig.canonicalizationAlgorithm = "http://www.w3.org/TR/2001/REC-xml-c14n-20010315"
 
-            sig.keyInfoProvider = new MyKeyInfo()
+            sig.keyInfoProvider = new MyKeyInfo(arqIni[cnpjEmissor].CERTIFICADO)
 
 
             //var signature = select(xmlNotas, "/*/*[local-name(.)='Signature' and namespace-uri(.)='http://www.w3.org/2000/09/xmldsig#']")[0]
@@ -224,29 +224,33 @@ module.exports = {
                 // this is the signal that the signature is affecting the whole xml document
                 true
             )
-            sig.signingKey = fs.readFileSync(process.env.CERTIFICADO)
+            sig.signingKey = fs.readFileSync(arqIni[cnpjEmissor].CERTIFICADO)
             sig.computeSignature(xmlNotas)
 
             /*****************************************************
              * Cria o path ano/mes/dia para guardar as NFSe
              *****************************************************/
-            pathSignXML = process.env.ASSINADAS + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD') + '\\'
+            pathSignXML = arqIni[cnpjEmissor].ASSINADAS + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD') + '\\'
 
-            if (!fs.existsSync(process.env.ASSINADAS + moment().format('YYYY') + '\\')) {
-                fs.mkdirSync(process.env.ASSINADAS + moment().format('YYYY') + '\\');
+            if (!fs.existsSync(arqIni[cnpjEmissor].ASSINADAS)){
+                fs.mkdirSync(arqIni[cnpjEmissor].ASSINADAS)
             }
 
-            if (!fs.existsSync(process.env.ASSINADAS + moment().format('YYYY') + '\\' + moment().format('MM'))) {
-                fs.mkdirSync(process.env.ASSINADAS + moment().format('YYYY') + '\\' + moment().format('MM'))
+            if (!fs.existsSync(arqIni[cnpjEmissor].ASSINADAS + moment().format('YYYY') + '\\')) {
+                fs.mkdirSync(arqIni[cnpjEmissor].ASSINADAS + moment().format('YYYY') + '\\');
             }
 
-            if (!fs.existsSync(process.env.ASSINADAS + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD'))) {
-                fs.mkdirSync(process.env.ASSINADAS + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD'));
+            if (!fs.existsSync(arqIni[cnpjEmissor].ASSINADAS + moment().format('YYYY') + '\\' + moment().format('MM'))) {
+                fs.mkdirSync(arqIni[cnpjEmissor].ASSINADAS + moment().format('YYYY') + '\\' + moment().format('MM'))
+            }
+
+            if (!fs.existsSync(arqIni[cnpjEmissor].ASSINADAS + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD'))) {
+                fs.mkdirSync(arqIni[cnpjEmissor].ASSINADAS + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD'));
             }
 
             // Salva o arquivo
-            fs.writeFileSync(pathSignXML + 'rps_' + numNFSe + '.xml', sig.getSignedXml())
-            pathRPS.push(pathSignXML + 'rps_' + numNFSe + '.xml')
+            fs.writeFileSync(pathSignXML + 'rps_' + ("000000" + numNFSe).slice(-6) + '.xml', sig.getSignedXml())
+            pathRPS.push(pathSignXML + 'rps_' + ("000000" + numNFSe).slice(-6) + '.xml')
         }//Fim  do loop das NFSe
         return pathRPS
     },
@@ -255,20 +259,20 @@ module.exports = {
     /**********************************************************
      * Função para criação do XML de Lotes de RPS
      **********************************************************/
-    createLote: function (req, pathRPSLote) {
+    createLote: function (req, pathRPSLote, cnpjEmissor) {
         var SignedXml = require('xml-crypto').SignedXml
         var fs = require('fs')
         var sig = new SignedXml()
         var jsonxml = require('jsontoxml');
         var moment = require('moment-timezone');
 
-        cPath = process.env.REMESSA;
+        const arqIni = require('./parseIni').leArqIni();
+        cPath = arqIni[cnpjEmissor].REMESSA;
         nomeArq = req.params.cArquivo.replace('.txt', '').trim();
 
-        var arqIni = require('./parseIni').leArqIni();
-        numLote = parseInt(arqIni.RPS.LOTE) + 1;
+        numLote = parseInt(arqIni[cnpjEmissor].RPS_LOTE) + 1;
 
-        arqIni.RPS.LOTE = numLote
+        arqIni[cnpjEmissor].RPS_LOTE = numLote
         require('./parseIni').writeIni(arqIni);
 
         auxLote = [
@@ -278,9 +282,9 @@ module.exports = {
                     {
                         name: 'credenciais',
                         children: [
-                            { name: 'usuario', text: process.env.SIGEP_USUARIO },
-                            { name: 'senha', text: process.env.SIGEP_SENHA },
-                            { name: 'chavePrivada', text: process.env.SIGEP_CHAVE }
+                            { name: 'usuario', text: arqIni[cnpjEmissor].SIGEP_USUARIO },
+                            { name: 'senha', text: arqIni[cnpjEmissor].SIGEP_SENHA },
+                            { name: 'chavePrivada', text: arqIni[cnpjEmissor].SIGEP_CHAVE }
                         ]
                     },
                     {
@@ -292,11 +296,11 @@ module.exports = {
                                 children: [
                                     {
                                         name: 'Cnpj',
-                                        text: process.env.CNPJ
+                                        text: arqIni[cnpjEmissor].CNPJ
                                     },
                                 ]
                             },
-                            { name: 'InscricaoMunicipal', text: process.env.IM },
+                            { name: 'InscricaoMunicipal', text: arqIni[cnpjEmissor].IM },
                             { name: 'QuantidadeRps', text: pathRPSLote.length },
                             { name: 'ListaRps', text: '[RPS]' }
                         ]
@@ -326,7 +330,7 @@ module.exports = {
 
         sig.canonicalizationAlgorithm = "http://www.w3.org/TR/2001/REC-xml-c14n-20010315"
 
-        sig.keyInfoProvider = new MyKeyInfo()
+        sig.keyInfoProvider = new MyKeyInfo(arqIni[cnpjEmissor].CERTIFICADO)
 
 
         //var signature = select(xmlNotas, "/*/*[local-name(.)='Signature' and namespace-uri(.)='http://www.w3.org/2000/09/xmldsig#']")[0]
@@ -341,24 +345,28 @@ module.exports = {
             // this is the signal that the signature is affecting the whole xml document
             true
         )
-        sig.signingKey = fs.readFileSync(process.env.CERTIFICADO)
+        sig.signingKey = fs.readFileSync(arqIni[cnpjEmissor].CERTIFICADO)
         sig.computeSignature(xmlLote)
 
         /*****************************************************
          * Cria o path ano/mes/dia para guardar as NFSe
          *****************************************************/
-        pathLotes = process.env.LOTES + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD') + '\\'
+        pathLotes = arqIni[cnpjEmissor].LOTES + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD') + '\\'
 
-        if (!fs.existsSync(process.env.LOTES + moment().format('YYYY') + '\\')) {
-            fs.mkdirSync(process.env.LOTES + moment().format('YYYY') + '\\');
+        if (!fs.existsSync(arqIni[cnpjEmissor].LOTES)){
+            fs.mkdirSync(arqIni[cnpjEmissor].LOTES)
         }
 
-        if (!fs.existsSync(process.env.LOTES + moment().format('YYYY') + '\\' + moment().format('MM'))) {
-            fs.mkdirSync(process.env.LOTES + moment().format('YYYY') + '\\' + moment().format('MM'))
+        if (!fs.existsSync(arqIni[cnpjEmissor].LOTES + moment().format('YYYY') + '\\')) {
+            fs.mkdirSync(arqIni[cnpjEmissor].LOTES + moment().format('YYYY') + '\\');
         }
 
-        if (!fs.existsSync(process.env.LOTES + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD'))) {
-            fs.mkdirSync(process.env.LOTES + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD'));
+        if (!fs.existsSync(arqIni[cnpjEmissor].LOTES + moment().format('YYYY') + '\\' + moment().format('MM'))) {
+            fs.mkdirSync(arqIni[cnpjEmissor].LOTES + moment().format('YYYY') + '\\' + moment().format('MM'))
+        }
+
+        if (!fs.existsSync(arqIni[cnpjEmissor].LOTES + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD'))) {
+            fs.mkdirSync(arqIni[cnpjEmissor].LOTES + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD'));
         }
 
 
@@ -370,11 +378,12 @@ module.exports = {
     /**********************************************************
      * Função para criação do Envelope de Lote de RPS - SOAP
      **********************************************************/
-    createEnvelope: function (req, pathLote) {
+    createEnvelope: function (req, pathLote, cnpjEmissor) {
         var jsonxml = require('jsontoxml');
         var fs = require('fs')
         xmlLote = fs.readFileSync(pathLote);
         var moment = require('moment-timezone');
+        var arqIni = require('./parseIni').leArqIni();
 
         xmlEnvelope = `
         <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ws="http://ws.integration.pm.bsit.com.br/">
@@ -398,22 +407,26 @@ module.exports = {
         /*****************************************************
         * Cria o path ano/mes/dia para guardar as NFSe
         *****************************************************/
-        pathEnvelopes = process.env.ENVELOPES + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD') + '\\'
+        pathEnvelopes =  moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD') + '\\'
 
-        if (!fs.existsSync(process.env.ENVELOPES + moment().format('YYYY') + '\\')) {
-            fs.mkdirSync(process.env.ENVELOPES + moment().format('YYYY') + '\\');
+        if (!fs.existsSync(arqIni[cnpjEmissor].ENVELOPES)){
+            fs.mkdirSync(arqIni[cnpjEmissor].ENVELOPES)
         }
 
-        if (!fs.existsSync(process.env.ENVELOPES + moment().format('YYYY') + '\\' + moment().format('MM'))) {
-            fs.mkdirSync(process.env.ENVELOPES + moment().format('YYYY') + '\\' + moment().format('MM'))
+        if (!fs.existsSync(arqIni[cnpjEmissor].ENVELOPES + moment().format('YYYY') + '\\')) {
+            fs.mkdirSync(arqIni[cnpjEmissor].ENVELOPES + moment().format('YYYY') + '\\');
         }
 
-        if (!fs.existsSync(process.env.ENVELOPES + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD'))) {
-            fs.mkdirSync(process.env.ENVELOPES + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD'));
+        if (!fs.existsSync(arqIni[cnpjEmissor].ENVELOPES + moment().format('YYYY') + '\\' + moment().format('MM'))) {
+            fs.mkdirSync(arqIni[cnpjEmissor].ENVELOPES + moment().format('YYYY') + '\\' + moment().format('MM'))
+        }
+
+        if (!fs.existsSync(arqIni[cnpjEmissor].ENVELOPES + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD'))) {
+            fs.mkdirSync(arqIni[cnpjEmissor].ENVELOPES + moment().format('YYYY') + '\\' + moment().format('MM') + '\\' + moment().format('DD'));
         }
 
         var path = require("path");
-        fs.writeFileSync(pathEnvelopes + 'Envelope_' + path.basename(pathLote.toString()), xmlEnvelope)
+        fs.writeFileSync(arqIni[cnpjEmissor].ENVELOPES + pathEnvelopes + 'Envelope_' + path.basename(pathLote.toString()), xmlEnvelope)
         return pathEnvelopes + 'Envelope_' + path.basename(pathLote)
         
 
@@ -427,11 +440,11 @@ function FormataValorTXT(valor) {
 }
 
 
-function MyKeyInfo() {
+function MyKeyInfo(certificado) {
     this.getKeyInfo = function (key, prefix) {
 
         var fs = require("fs")
-        pem = fs.readFileSync(process.env.CERTIFICADO).toString()
+        pem = fs.readFileSync(certificado).toString()
 
         nPosIni = pem.indexOf('-----BEGIN CERTIFICATE-----')
         nPosFim = pem.indexOf('-----END CERTIFICATE-----')
@@ -445,7 +458,7 @@ function MyKeyInfo() {
     }
     this.getKey = function (keyInfo) {
         //you can use the keyInfo parameter to extract the key in any way you want      
-        return fs.readFileSync(process.env.CERTIFICADO)
+        return fs.readFileSync(arqIni[cnpjEmissor].CERTIFICADO)
     }
 }
 
