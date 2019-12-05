@@ -428,9 +428,8 @@ module.exports = {
         var path = require("path");
         fs.writeFileSync(arqIni[cnpjEmissor].ENVELOPES + pathEnvelopes + 'Envelope_' + path.basename(pathLote.toString()), xmlEnvelope)
         return pathEnvelopes + 'Envelope_' + path.basename(pathLote)
-        
-
     }
+
 };
 
 

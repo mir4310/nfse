@@ -1,11 +1,11 @@
 var express = require('express');
-var router = express.Router({mergeParams: true});
+var router = express.Router({ mergeParams: true });
 
 //Middle ware that is specific to this router
 router.use(function timeLog(req, res, next) {
   /* Verifica autenticação no módulo NFSe */
 
-  
+
   next();
 });
 
@@ -16,25 +16,24 @@ router.all('/', function (req, res) {
 });
 
 // Define a rota readTXT
-router.get('/enviaLote/:cnpj/:cArquivo', async function (req, res){
+router.get('/enviaLote/:cnpj/:cArquivo', async function (req, res) {
   console.log('\n\n/enviaLote/' + req.params.cArquivo)
 
   const arqIni = require('./parseIni').leArqIni();
 
-  req.params.cArquivo = arqIni[req.params.cnpj].ENVELOPES + req.params.cArquivo
+  /*************************************
+   * Checa se o WebService esta online
+   *************************************/
+  enderecoWS = arqIni[req.params.cnpj].SIGEP_ENDPOINT;
+  var objWS = require('./ws.sigep')
 
-  //Carrega modulo com funções de processamento
-  var objTXT = require('./nfse.sigep') 
+  objWS.enviaLoteWebService(req, res)
 
-  const retornoWS = '';
-
-  console.log("===== Lote enviado com sucesso =====\n")
-  res.send({status: 'ok', mensagem: 'Lote enviado com sucesso', arquivo: req.params.cArquivo , retorno: retornoWS})
 });
 
 
 // Define a rota readTXT
-router.get('/geraLoteTXT/:cnpj/:cArquivo', async function (req, res){
+router.get('/geraLoteTXT/:cnpj/:cArquivo', async function (req, res) {
 
   console.log('\n\n/geraLoteTXT/' + req.params.cArquivo)
 
@@ -44,22 +43,22 @@ router.get('/geraLoteTXT/:cnpj/:cArquivo', async function (req, res){
 
 
   //Carrega modulo com funções de processamento
-  var objTXT = require('./nfse.sigep') 
+  var objTXT = require('./nfse.sigep')
 
 
   //Le arquivo TXT em um array
   console.log("Lendo arquivo txt...")
-  const aNotas = await objTXT.leArquivoTXT(req.params.cArquivo) 
+  const aNotas = await objTXT.leArquivoTXT(req.params.cArquivo)
 
   //Parse no arquivo TXT criando um json já com os campos separados
   console.log("Decodificando arquivo txt...")
-  const jsonNotas = await objTXT.parseTXT(aNotas) 
+  const jsonNotas = await objTXT.parseTXT(aNotas)
 
   //Cria arquivos RPS e assina
   console.log("Gerando RPS...")
   const pathRPSLote = await objTXT.createXML(req, jsonNotas, req.params.cnpj)
 
-  if (!pathRPSLote){
+  if (!pathRPSLote) {
     console.log("Erro gerando RPS...")
     return false
   }
@@ -71,9 +70,19 @@ router.get('/geraLoteTXT/:cnpj/:cArquivo', async function (req, res){
 
   console.log("Gerando Envelope...")
   const pathEnvelope = await objTXT.createEnvelope(req, pathLote, req.params.cnpj)
-  
+
   console.log("===== Lote gerado com sucesso =====\n")
-  res.send({status: 'ok', mensagem: 'Lote gerado com sucesso', arquivo: pathEnvelope,  arquivo_uri: encodeURI(pathEnvelope)})
+  res.send({ status: 'ok', mensagem: 'Lote gerado com sucesso', arquivo: pathEnvelope, arquivo_uri: encodeURI(pathEnvelope) })
+});
+
+router.get('/statusWS/:cnpj', async function (req, res) {
+  console.log('\n\n/statusWS/' + req.params.cnpj)
+  const arqIni = require('./parseIni').leArqIni();
+  enderecoWS = arqIni[req.params.cnpj].SIGEP_ENDPOINT;
+
+  var objWS = require('./ws.sigep')
+
+  objWS.consultaWebService(req, res)
 });
 
 module.exports = router;
