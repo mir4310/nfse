@@ -32,3 +32,4 @@ SIGEP_CHAVE=xxxxxxx
 SIGEP_ENDPOINT=http://gestaopublica.botucatu.bsit-br.com.br/integracao/services/nfseWS
 RPS_NUMERO=0
 RPS_LOTE=0
+CNAE_NFSE=9999999
