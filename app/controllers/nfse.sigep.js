@@ -129,7 +129,7 @@ module.exports = {
                                             { name: 'Aliquota', text: FormataValorTXT(aNotas[i].aliqSimples) }
                                         ]
                                     },
-                                    { name: 'CodigoCnae', text: '6201501' },
+                                    { name: 'CodigoCnae', text: arqIni[cnpjEmissor].CNAE_NFSE },  //Visual 6201501   //Exatus 6920601   //Digital 8219999
                                     { name: 'ItemListaServico', text: FormataValorTXT(aNotas[i].codServico) },
                                     { name: 'CodigoTributacaoMunicipio', text: '1' },
                                     { name: 'Discriminacao', text: aNotas[i].descricaoServico },
@@ -485,3 +485,5 @@ const xml = fs.readFileSync('test/zipCodeEnvelope.xml', 'utf-8');
   console.log(statusCode);
 })();
 */
+
+// wanderson.alves@sigep.com.br

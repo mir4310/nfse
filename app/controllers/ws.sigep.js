@@ -85,7 +85,7 @@ module.exports = {
             // usage of module
             (async () => {
                 try {
-                    const { response } = await soapRequest({ url: url, headers: sampleHeaders, xml: xml, timeout: 10000 }); // Optional timeout parameter(milliseconds)
+                    const { response } = await soapRequest({ url: url, headers: sampleHeaders, xml: xml, timeout: 60000 }); // Optional timeout parameter(milliseconds)
                     const { headers, body, statusCode } = response;
 
                     var cArquivo = req.params.cArquivo.replace('.xml','.ret.xml');
@@ -96,8 +96,6 @@ module.exports = {
                     }
 
                     fs.writeFileSync(arqIni[req.params.cnpj].ENVELOPES + cArquivo, body, '')
-                    //console.log(body);
-                    //console.log(statusCode);
 
                     const { DOMParser } = require('xmldom');
                     const xmlToJSON = require('xmlToJSON');
@@ -110,7 +108,7 @@ module.exports = {
                     
                     ret = xmlToJSON.parseString(xmlToJSON.stringToXML);
 
-                    console.log(ret.EnviarLoteRpsSincronoResposta[0].ListaMensagemRetorno[0].MensagemRetorno[0].Mensagem[0]._text)
+                    //console.log(ret.EnviarLoteRpsSincronoResposta[0].ListaMensagemRetorno[0].MensagemRetorno[0].Mensagem[0]._text)
 
                     if (ret.EnviarLoteRpsSincronoResposta[0].ListaMensagemRetorno[0].MensagemRetorno[0].Mensagem[0]._text == 'O Lote foi convertido com sucesso') {
                         statusWS = true
@@ -126,6 +124,8 @@ module.exports = {
                         objResponse = null
                         mensagemWS="Erro enviando lote: " + ret.EnviarLoteRpsSincronoResposta[0].ListaMensagemRetorno[0].MensagemRetorno[0].Mensagem[0]._text
                     }
+
+                    console.log(xmlRet)
 
                     return res.send({ status: statusWS, mensagem: mensagemWS, arquivo: req.params.cArquivo, retorno: objResponse })
 
