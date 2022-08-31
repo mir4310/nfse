@@ -20,7 +20,7 @@
     "jsontoxml": "^1.0.1",
     "line-reader": "^0.4.0",
     "moment": "^2.24.0",
-    "moment-timezone": "^0.5.27",
+    "moment-timezone": "^0.5.35",
     "momentjs": "^2.0.0",
     "node-forge": "^0.9.1",
     "node-windows": "^0.1.14",
